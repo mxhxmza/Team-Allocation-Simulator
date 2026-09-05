@@ -125,6 +125,7 @@ team-allocation-simulator/
 ├── notebooks/
 │   └── Team_Allocation_Simulator.ipynb   # Original Colab notebook with visualizations
 ├── data/
+│   ├── README.txt            # Where to place your records.csv
 │   └── records.csv           # Input file (not included — see Data Format below)
 ├── docs/
 │   └── design_notes.md       # Algorithm design rationale and challenge writeup
