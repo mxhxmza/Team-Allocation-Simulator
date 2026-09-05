@@ -1,0 +1,1224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--#ARTIFACT_BEGIN-->
+<title>Team Allocation Simulator</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --page:#e9eef4; --surface:#ffffff; --surface-2:#f4f7fa; --surface-3:#e6ecf3;
+  --ink:#0f1720; --ink-2:#4a5666; --ink-3:#7d8b9c;
+  --line:#d5dde6; --line-strong:#bac6d4;
+  --accent:#256abf; --accent-deep:#184f95; --accent-wash:rgba(37,106,191,.10); --accent-soft:rgba(37,106,191,.42);
+  --crit:#d03b3b; --crit-wash:rgba(208,59,59,.10);
+  --good-ink:#006300; --crit-ink:#a82a2a; --warn-ink:#8a5a00;
+  --grid:#e3e9f0; --tip-bg:#0f1720; --tip-ink:#e9eef4;
+  --shadow:0 1px 2px rgba(15,23,32,.05), 0 10px 26px -16px rgba(15,23,32,.30);
+  --f-display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --page:#0b0f14; --surface:#141a21; --surface-2:#19212a; --surface-3:#202a35;
+    --ink:#e9eef3; --ink-2:#a4b1c0; --ink-3:#79879a;
+    --line:#26313d; --line-strong:#36434f;
+    --accent:#3987e5; --accent-deep:#6da7ec; --accent-wash:rgba(57,135,229,.15); --accent-soft:rgba(57,135,229,.42);
+    --crit:#e05b5b; --crit-wash:rgba(224,91,91,.15);
+    --good-ink:#3fc63f; --crit-ink:#f08a8a; --warn-ink:#e0a83c;
+    --grid:#222c37; --tip-bg:#e9eef3; --tip-ink:#0b0f14;
+    --shadow:0 1px 2px rgba(0,0,0,.45), 0 12px 30px -18px rgba(0,0,0,.9);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --page:#0b0f14; --surface:#141a21; --surface-2:#19212a; --surface-3:#202a35;
+  --ink:#e9eef3; --ink-2:#a4b1c0; --ink-3:#79879a;
+  --line:#26313d; --line-strong:#36434f;
+  --accent:#3987e5; --accent-deep:#6da7ec; --accent-wash:rgba(57,135,229,.15); --accent-soft:rgba(57,135,229,.42);
+  --crit:#e05b5b; --crit-wash:rgba(224,91,91,.15);
+  --good-ink:#3fc63f; --crit-ink:#f08a8a; --warn-ink:#e0a83c;
+  --grid:#222c37; --tip-bg:#e9eef3; --tip-ink:#0b0f14;
+  --shadow:0 1px 2px rgba(0,0,0,.45), 0 12px 30px -18px rgba(0,0,0,.9);
+}
+
+*,*::before,*::after{box-sizing:border-box}
+body{
+  margin:0; background:var(--page); color:var(--ink);
+  font-family:var(--f-body); font-size:14px; line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{font-family:var(--f-display); margin:0; text-wrap:balance; letter-spacing:-.015em}
+p{margin:0}
+button,input,select{font:inherit; color:inherit}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:3px}
+@media (prefers-reduced-motion: reduce){*{animation:none!important; transition:none!important}}
+
+.shell{max-width:1400px; margin:0 auto; padding:0 clamp(16px,3vw,40px) 56px}
+
+/* ---------- masthead ---------- */
+.masthead{padding:clamp(26px,4vw,48px) 0 20px; border-bottom:1px solid var(--line)}
+.eyebrow{
+  font-family:var(--f-mono); font-size:11px; font-weight:500;
+  letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3);
+}
+.masthead h1{font-size:clamp(1.85rem,1.1rem+2.4vw,2.7rem); font-weight:700; margin:10px 0 8px}
+.lede{color:var(--ink-2); max-width:64ch; font-size:15px}
+.byline{margin-top:14px; font-family:var(--f-mono); font-size:11.5px; color:var(--ink-3)}
+
+/* ---------- constraint spec strip ---------- */
+.spec{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:1px;
+  background:var(--line); border:1px solid var(--line); border-radius:6px; overflow:hidden; margin:24px 0 28px}
+.spec-cell{background:var(--surface); padding:13px 16px; display:flex; flex-direction:column; gap:4px}
+.spec-cell .k{font-family:var(--f-mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3)}
+.spec-cell .v{font-family:var(--f-display); font-weight:600; font-size:15px}
+.spec-cell .n{color:var(--ink-2); font-size:12.5px}
+
+/* ---------- layout ---------- */
+.work{display:grid; grid-template-columns:322px minmax(0,1fr); gap:24px; align-items:start}
+@media (max-width:1020px){.work{grid-template-columns:1fr}}
+
+.rail{display:flex; flex-direction:column; gap:16px; position:sticky; top:18px}
+@media (max-width:1020px){.rail{position:static}}
+
+.panel{background:var(--surface); border:1px solid var(--line); border-radius:8px; box-shadow:var(--shadow)}
+.panel-head{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; align-items:baseline; justify-content:space-between; gap:12px}
+.panel-head h2{font-size:13.5px; font-weight:600}
+.panel-body{padding:16px}
+.step{font-family:var(--f-mono); font-size:11px; color:var(--ink-3); letter-spacing:.1em}
+
+/* ---------- drop zone ---------- */
+.drop{
+  position:relative;
+  border:1.5px dashed var(--line-strong); border-radius:6px; background:var(--surface-2);
+  padding:20px 16px; text-align:center; cursor:pointer; transition:border-color .15s, background .15s;
+}
+.drop:hover,.drop.hot{border-color:var(--accent); background:var(--accent-wash)}
+/* The real input covers the whole zone, so the click lands on it directly. */
+.drop input[type=file]{position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer}
+.drop:focus-within{outline:2px solid var(--accent); outline-offset:2px}
+.drop .big{font-family:var(--f-display); font-weight:600; font-size:14px; word-break:break-word}
+.drop .small{color:var(--ink-3); font-size:12px; margin-top:3px}
+.drop svg{display:block; margin:0 auto 8px; color:var(--ink-3)}
+.drop.loaded{border-style:solid; border-color:var(--accent); background:var(--accent-wash)}
+.drop.loaded svg{color:var(--accent)}
+.drop.loaded .big{color:var(--ink)}
+
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:7px;
+  border:1px solid var(--line-strong); background:var(--surface); color:var(--ink);
+  padding:8px 13px; border-radius:5px; cursor:pointer; font-size:13px; font-weight:500;
+  transition:background .13s, border-color .13s;
+}
+.btn:hover{background:var(--surface-3); border-color:var(--ink-3)}
+.btn-primary{background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600}
+.btn-primary:hover{background:var(--accent-deep); border-color:var(--accent-deep)}
+.btn-wide{width:100%}
+.btn:disabled{opacity:.5; cursor:not-allowed}
+
+.field{display:flex; flex-direction:column; gap:6px; margin-top:15px}
+.field:first-child{margin-top:0}
+.field label{font-family:var(--f-mono); font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3)}
+.field .row{display:flex; align-items:center; gap:10px}
+.field input[type=range]{flex:1; accent-color:var(--accent); min-width:0}
+.field .num{font-family:var(--f-mono); font-size:13px; font-weight:600; min-width:46px; text-align:right; font-variant-numeric:tabular-nums}
+.field .hint{font-size:11.5px; color:var(--ink-3); line-height:1.45}
+
+.filemeta{
+  margin-top:12px; font-family:var(--f-mono); font-size:11.5px; color:var(--ink-2);
+  background:var(--surface-2); border:1px solid var(--line); border-radius:5px; padding:9px 11px; word-break:break-word;
+}
+.filemeta .tag{color:var(--ink-3)}
+
+pre.fmt{
+  margin:0; font-family:var(--f-mono); font-size:11px; line-height:1.75; color:var(--ink-2);
+  background:var(--surface-2); border:1px solid var(--line); border-radius:5px;
+  padding:11px 12px; overflow-x:auto;
+}
+pre.fmt b{color:var(--ink); font-weight:600}
+.notes{margin:12px 0 0; padding-left:16px; font-size:12px; color:var(--ink-3); line-height:1.6}
+.notes li{margin-bottom:4px}
+
+/* ---------- results ---------- */
+.results{display:flex; flex-direction:column; gap:20px; min-width:0}
+
+.runbar{
+  display:flex; flex-wrap:wrap; align-items:center; gap:12px; justify-content:space-between;
+  background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:11px 16px; box-shadow:var(--shadow);
+}
+.runbar .status{display:flex; align-items:center; gap:9px; font-size:13px; color:var(--ink-2); min-width:0}
+.dot{width:7px; height:7px; border-radius:50%; background:var(--accent); flex:none}
+.dot.sample{background:var(--warn-ink)}
+.dot.bad{background:var(--crit)}
+
+.tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(148px,1fr)); gap:1px; background:var(--line);
+  border:1px solid var(--line); border-radius:8px; overflow:hidden}
+.tile{background:var(--surface); padding:14px 17px}
+.tile .k{font-family:var(--f-mono); font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3)}
+.tile .v{font-family:var(--f-display); font-weight:700; font-size:27px; letter-spacing:-.02em; margin-top:4px; line-height:1.1}
+.tile .u{font-size:14px; font-weight:600; color:var(--ink-3); margin-left:2px}
+
+/* scorecard */
+.score-row{display:grid; grid-template-columns:minmax(0,1.5fr) 96px minmax(80px,1fr) 74px; gap:14px;
+  align-items:center; padding:12px 16px; border-bottom:1px solid var(--line)}
+.score-row:last-child{border-bottom:0}
+@media (max-width:640px){.score-row{grid-template-columns:1fr 1fr; row-gap:8px}}
+.score-name{font-weight:600; font-size:13px}
+.score-name .sub{display:block; font-weight:400; font-size:11px; color:var(--ink-3); font-family:var(--f-mono); letter-spacing:.02em}
+.score-count{font-family:var(--f-mono); font-size:12.5px; color:var(--ink-2); font-variant-numeric:tabular-nums}
+.meter{height:7px; background:var(--surface-3); border-radius:4px; overflow:hidden}
+.meter span{display:block; height:100%; background:var(--accent); border-radius:4px}
+.score-pct{font-family:var(--f-mono); font-weight:600; font-size:14px; text-align:right; font-variant-numeric:tabular-nums}
+.pill{display:inline-flex; align-items:center; gap:4px; font-family:var(--f-mono); font-size:10px;
+  font-weight:600; letter-spacing:.06em; padding:2px 6px; border-radius:3px; text-transform:uppercase; vertical-align:1px}
+.pill.ok{color:var(--good-ink); background:rgba(12,163,12,.13)}
+.pill.bad{color:var(--crit-ink); background:var(--crit-wash)}
+
+/* charts */
+.charts{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px}
+.charts > .span2{grid-column:1 / -1}
+@media (max-width:780px){.charts{grid-template-columns:1fr} .charts > .span2{grid-column:auto}}
+.chart-wrap{padding:14px 16px 16px}
+.chart-note{font-size:11.5px; color:var(--ink-3); margin-top:10px; line-height:1.5}
+svg.chart{display:block; width:100%; height:auto; overflow:visible}
+svg.chart text{font-family:var(--f-mono); fill:var(--ink-3)}
+svg.chart .lbl{fill:var(--ink-2); font-weight:500}
+svg.chart .gl{stroke:var(--grid); stroke-width:1}
+svg.chart .axis{stroke:var(--line-strong); stroke-width:1}
+svg.chart .band{fill:var(--accent-wash)}
+svg.chart .thr{stroke:var(--accent); stroke-width:1; stroke-dasharray:3 3}
+svg.chart .m-ok{fill:var(--accent)}
+svg.chart .m-soft{fill:var(--accent-soft)}
+svg.chart .m-bad{fill:var(--crit)}
+svg.chart .hit{fill:transparent}
+
+#tip{
+  position:fixed; z-index:60; pointer-events:none; opacity:0; transform:translate(-50%,-100%);
+  background:var(--tip-bg); color:var(--tip-ink); font-family:var(--f-mono); font-size:11px; line-height:1.5;
+  padding:6px 9px; border-radius:4px; white-space:nowrap; transition:opacity .1s; box-shadow:var(--shadow);
+}
+#tip b{font-weight:600}
+
+/* tables */
+.tablewrap{overflow-x:auto; max-height:400px; overflow-y:auto}
+table{border-collapse:collapse; width:100%; font-size:12.5px}
+th,td{text-align:right; padding:7px 14px; white-space:nowrap; border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+thead th{
+  position:sticky; top:0; z-index:2; background:var(--surface-2); color:var(--ink-3);
+  font-family:var(--f-mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; font-weight:500;
+}
+tbody td{font-variant-numeric:tabular-nums; font-family:var(--f-mono)}
+tbody td:first-child{font-weight:600; color:var(--ink)}
+tbody tr:hover td{background:var(--surface-2)}
+td.bad{color:var(--crit-ink); font-weight:600}
+
+/* team browser */
+.browsebar{display:flex; flex-wrap:wrap; gap:10px; align-items:center}
+select.sel{background:var(--surface); border:1px solid var(--line-strong); border-radius:5px; padding:6px 9px; font-size:12.5px; font-family:var(--f-mono)}
+.teams{display:grid; grid-template-columns:repeat(auto-fill,minmax(266px,1fr)); gap:12px; margin-top:14px}
+.team{border:1px solid var(--line); border-radius:7px; background:var(--surface-2); overflow:hidden}
+.team.viol{border-color:var(--crit); box-shadow:inset 3px 0 0 var(--crit)}
+.team-h{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 11px; border-bottom:1px solid var(--line)}
+.team-h .no{font-family:var(--f-display); font-weight:700; font-size:13px}
+.team-h .mix{font-family:var(--f-mono); font-size:11px; color:var(--ink-2)}
+.team-stats{display:flex; gap:12px; padding:6px 11px; font-family:var(--f-mono); font-size:10.5px; color:var(--ink-3); border-bottom:1px solid var(--line); flex-wrap:wrap}
+.team-stats b{color:var(--ink-2); font-weight:600}
+.team-stats .bad{color:var(--crit-ink)}
+.roster{list-style:none; margin:0; padding:4px 0}
+.roster li{display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:8px; align-items:center; padding:4px 11px; font-size:12px}
+.roster .nm{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.roster .sc{font-family:var(--f-mono); font-size:10px; color:var(--ink-3); background:var(--surface-3); padding:1px 5px; border-radius:3px; white-space:nowrap}
+.roster .sc.dup{color:var(--crit-ink); background:var(--crit-wash)}
+.roster .gp{font-family:var(--f-mono); font-size:11.5px; font-variant-numeric:tabular-nums; color:var(--ink-2); min-width:32px; text-align:right}
+
+.errbox{border:1px solid var(--crit); background:var(--crit-wash); border-radius:7px; padding:12px 15px; font-size:12.5px; color:var(--ink)}
+.errbox h3{font-size:13px; margin-bottom:6px; color:var(--crit-ink)}
+.errbox ul{margin:0; padding-left:18px; font-family:var(--f-mono); font-size:11.5px; line-height:1.7}
+
+footer.foot{margin-top:36px; padding-top:18px; border-top:1px solid var(--line); font-size:12px; color:var(--ink-3); display:flex; flex-wrap:wrap; gap:14px; justify-content:space-between}
+footer.foot code{font-family:var(--f-mono); color:var(--ink-2)}
+[hidden]{display:none!important}
+
+/* ---------- resting state, before any run ---------- */
+#output{display:flex; flex-direction:column; gap:20px}
+.dot.idle{background:var(--ink-3)}
+.resting{overflow:hidden}
+.resting-body{padding:34px 22px 26px; text-align:center; border-bottom:1px solid var(--line)}
+.resting-body svg{color:var(--ink-3); margin:0 auto 12px; display:block}
+.resting-body h3{font-size:16px; font-weight:600; margin-bottom:6px}
+.resting-body p{color:var(--ink-2); font-size:13px; max-width:46ch; margin:0 auto}
+.resting-body code{font-family:var(--f-mono); font-size:12px; color:var(--ink)}
+.pipeline{list-style:none; counter-reset:stage; margin:0; padding:8px 0; background:var(--surface-2)}
+.pipeline li{
+  counter-increment:stage; display:grid; grid-template-columns:26px 130px minmax(0,1fr);
+  gap:12px; align-items:baseline; padding:7px 22px; font-size:12.5px;
+}
+.pipeline li::before{
+  content:counter(stage,decimal-leading-zero); font-family:var(--f-mono); font-size:10.5px;
+  color:var(--ink-3); letter-spacing:.06em;
+}
+.pipeline .fn{font-family:var(--f-mono); font-size:12px; color:var(--accent); font-weight:500}
+.pipeline .d{color:var(--ink-2)}
+@media (max-width:560px){
+  .pipeline li{grid-template-columns:26px minmax(0,1fr); row-gap:2px}
+  .pipeline .d{grid-column:2}
+}
+</style>
+<!--#HEAD_END-->
+</head>
+<body>
+<div class="shell">
+
+<header class="masthead">
+  <div class="eyebrow">NTU SC1003 &middot; Constraint satisfaction</div>
+  <h1>Team Allocation Simulator</h1>
+  <p class="lede">Upload a cohort of students and this runs the allocator in your browser: it sorts each tutorial group by CGPA, interleaves the gender split into teams of five, then swaps students until team averages sit inside the group&rsquo;s CGPA band and no team carries three from the same school.</p>
+  <p class="byline">Port of <code>src/allocator.py</code> &middot; runs entirely client-side &middot; nothing is uploaded anywhere</p>
+</header>
+
+<div class="spec" role="list" aria-label="Constraints enforced">
+  <div class="spec-cell" role="listitem">
+    <span class="k">Constraint 1 &middot; Gender</span>
+    <span class="v">3M2F or 2M3F</span>
+    <span class="n">Both genders present in every team; skewed splits only when the group forces them.</span>
+  </div>
+  <div class="spec-cell" role="listitem">
+    <span class="k">Constraint 2 &middot; CGPA</span>
+    <span class="v">&plusmn;<span id="specGpa">0.20</span> of group mean</span>
+    <span class="n">Measured against each tutorial group&rsquo;s own mean, not the cohort mean.</span>
+  </div>
+  <div class="spec-cell" role="listitem">
+    <span class="k">Constraint 3 &middot; School</span>
+    <span class="v">Max 2 per school</span>
+    <span class="n">Swap candidates must match gender and sit within &plusmn;<span id="specTol">0.50</span> CGPA.</span>
+  </div>
+</div>
+
+<div class="work">
+
+  <!-- ============ CONTROL RAIL ============ -->
+  <aside class="rail">
+
+    <section class="panel">
+      <div class="panel-head"><h2>Cohort file</h2><span class="step">STEP 1</span></div>
+      <div class="panel-body">
+        <div class="drop" id="drop">
+          <input type="file" id="file" accept=".csv,text/csv" aria-label="Choose a cohort CSV file">
+          <div class="drop-face" id="dropIdle">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 16V4"></path><path d="m7 9 5-5 5 5"></path><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"></path>
+            </svg>
+            <div class="big">Drop records.csv here</div>
+            <div class="small">or click to browse</div>
+          </div>
+          <div class="drop-face" id="dropLoaded" hidden>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M20 6 9 17l-5-5"></path>
+            </svg>
+            <div class="big" id="dropName">&mdash;</div>
+            <div class="small" id="dropRows">&mdash;</div>
+          </div>
+        </div>
+        <div class="filemeta" id="filemeta"><span class="tag">source</span> &mdash;</div>
+        <button class="btn btn-wide" id="sampleBtn" style="margin-top:10px">Load sample cohort</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>Thresholds</h2><span class="step">STEP 2</span></div>
+      <div class="panel-body">
+        <div class="field">
+          <label for="gpaThr">CGPA deviation band</label>
+          <div class="row">
+            <input type="range" id="gpaThr" min="0.05" max="0.60" step="0.01" value="0.20">
+            <span class="num" id="gpaThrOut">&plusmn;0.20</span>
+          </div>
+          <span class="hint">How far a team average may sit from its tutorial group mean before the allocator tries to swap it back.</span>
+        </div>
+        <div class="field">
+          <label for="swapTol">School swap tolerance</label>
+          <div class="row">
+            <input type="range" id="swapTol" min="0.10" max="1.50" step="0.05" value="0.50">
+            <span class="num" id="swapTolOut">&plusmn;0.50</span>
+          </div>
+          <span class="hint">A student can only be moved out of an over-represented school if a same-gender peer sits within this CGPA distance.</span>
+        </div>
+      </div>
+    </section>
+
+    <button class="btn btn-primary btn-wide" id="runBtn" style="padding:11px">Run allocation</button>
+
+    <section class="panel">
+      <div class="panel-head"><h2>Expected format</h2></div>
+      <div class="panel-body">
+<pre class="fmt"><b>Tutorial Group,Student ID,School,Name,Gender,CGPA</b>
+G-1,S001,EEE,Alex Tan,Male,4.20
+G-1,S002,CoB (NBS),Ravi Kumar,Female,3.85
+G-1,S003,SCSE,Mei Lin,Female,4.51
+&hellip;</pre>
+        <ul class="notes">
+          <li>Header row required; six columns in that order.</li>
+          <li><code>Gender</code> is <code>Male</code> or <code>Female</code>. <code>CGPA</code> is a number.</li>
+          <li>Groups are read from column&nbsp;1 &mdash; any number of groups, any size from 5 students up.</li>
+          <li>Quoted fields with commas are handled.</li>
+        </ul>
+      </div>
+    </section>
+  </aside>
+
+  <!-- ============ RESULTS ============ -->
+  <main class="results">
+    <div id="errors"></div>
+
+    <div class="runbar">
+      <div class="status"><span class="dot idle" id="statusDot"></span><span id="statusText">Waiting for a cohort file</span></div>
+      <button class="btn" id="dlBtn" disabled>Download allocations CSV</button>
+    </div>
+
+    <section class="panel resting" id="resting">
+      <div class="resting-body">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect>
+          <rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
+        </svg>
+        <h3>No allocation yet</h3>
+        <p>Add a <code>records.csv</code> in step&nbsp;1, set your thresholds, then press <b>Run allocation</b>. Results appear here.</p>
+      </div>
+      <ol class="pipeline">
+        <li><span class="fn">file_reader</span><span class="d">Parse the CSV and bucket students by tutorial group</span></li>
+        <li><span class="fn">team_formation</span><span class="d">MergeSort by CGPA, split by gender, interleave into teams</span></li>
+        <li><span class="fn">gpaChecker</span><span class="d">Trade same-gender students between over- and under-average teams</span></li>
+        <li><span class="fn">finder_swapper</span><span class="d">Swap out surplus same-school students where a peer qualifies</span></li>
+        <li><span class="fn">file_writer</span><span class="d">Label every student with their team and hand back the CSV</span></li>
+      </ol>
+    </section>
+
+    <div id="output" hidden>
+    <div class="tiles" id="tiles"></div>
+
+    <section class="panel">
+      <div class="panel-head"><h2>Constraint satisfaction</h2><span class="step" id="scoreAll"></span></div>
+      <div id="score"></div>
+    </section>
+
+    <div class="charts">
+      <section class="panel span2">
+        <div class="panel-head"><h2>CGPA deviation per team</h2></div>
+        <div class="chart-wrap">
+          <svg class="chart" id="chartGpa" role="img" aria-label="Histogram of team CGPA deviation from tutorial group mean"></svg>
+          <p class="chart-note" id="noteGpa"></p>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Gender composition</h2></div>
+        <div class="chart-wrap">
+          <svg class="chart" id="chartGender" role="img" aria-label="Number of teams by gender composition"></svg>
+          <p class="chart-note" id="noteGender"></p>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>School concentration</h2></div>
+        <div class="chart-wrap">
+          <svg class="chart" id="chartSchool" role="img" aria-label="Number of teams by largest same-school block"></svg>
+          <p class="chart-note" id="noteSchool"></p>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel">
+      <div class="panel-head"><h2>Per tutorial group</h2><span class="step" id="groupCount"></span></div>
+      <div class="tablewrap"><table id="groupTable"></table></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>Team rosters</h2></div>
+      <div class="panel-body">
+        <div class="browsebar">
+          <label for="groupSel" class="step">TUTORIAL GROUP</label>
+          <select class="sel" id="groupSel"></select>
+          <span class="step" id="browseNote"></span>
+        </div>
+        <div class="teams" id="teams"></div>
+      </div>
+    </section>
+    </div><!-- /#output -->
+  </main>
+</div>
+
+<footer class="foot">
+  <span>Algorithm by Mohammed Hamza &middot; NTU Computer Engineering &middot; SC1003 course project</span>
+  <span>Pipeline: <code>file_reader &rarr; team_formation &rarr; gpaChecker &rarr; finder_swapper &rarr; file_writer</code></span>
+</footer>
+</div>
+<div id="tip" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+
+/* =====================================================================
+   1. CSV parsing
+   ===================================================================== */
+function parseCSV(text){
+  const rows = [];
+  let row = [], field = "", quoted = false, i = 0;
+  text = text.replace(/^\uFEFF/, "");   // strip a UTF-8 BOM if Excel left one
+  while (i < text.length){
+    const c = text[i];
+    if (quoted){
+      if (c === '"'){
+        if (text[i+1] === '"'){ field += '"'; i += 2; continue; }
+        quoted = false; i++; continue;
+      }
+      field += c; i++; continue;
+    }
+    if (c === '"'){ quoted = true; i++; continue; }
+    if (c === ','){ row.push(field); field = ""; i++; continue; }
+    if (c === '\r'){ i++; continue; }
+    if (c === '\n'){ row.push(field); rows.push(row); row = []; field = ""; i++; continue; }
+    field += c; i++;
+  }
+  row.push(field);
+  rows.push(row);
+  return rows
+    .map(r => r.map(f => f.trim()))
+    .filter(r => r.length > 1 || r[0] !== "");
+}
+
+/* Turn raw rows into validated student records, grouped by tutorial group. */
+function readCohort(text){
+  const rows = parseCSV(text);
+  const problems = [];
+  if (rows.length < 2) return { problems: ["The file has no data rows below the header."] };
+
+  const body = rows.slice(1);            // mirrors file_reader(): skip the header
+  const order = [];
+  const groups = new Map();
+  let kept = 0;
+
+  body.forEach((r, n) => {
+    const line = n + 2;                  // 1-based, counting the header
+    if (r.length < 6){
+      if (problems.length < 8) problems.push("Line " + line + ": " + r.length + " column(s), expected 6.");
+      return;
+    }
+    const gender = r[4];
+    if (gender !== "Male" && gender !== "Female"){
+      if (problems.length < 8) problems.push('Line ' + line + ': Gender is "' + r[4] + '", expected Male or Female.');
+      return;
+    }
+    const gpa = parseFloat(r[5]);
+    if (!isFinite(gpa)){
+      if (problems.length < 8) problems.push('Line ' + line + ': CGPA "' + r[5] + '" is not a number.');
+      return;
+    }
+    const student = [r[0], r[1], r[2], r[3], gender, r[5]];
+    if (!groups.has(r[0])){ groups.set(r[0], []); order.push(r[0]); }
+    groups.get(r[0]).push(student);
+    kept++;
+  });
+
+  if (!kept) return { problems: problems.length ? problems : ["No usable rows found."] };
+
+  const small = order.filter(g => groups.get(g).length < 5);
+  small.slice(0, 3).forEach(g => problems.push('Tutorial group "' + g + '" has fewer than 5 students and was skipped.'));
+  small.forEach(g => { groups.delete(g); });
+
+  const finalOrder = order.filter(g => groups.has(g));
+  if (!finalOrder.length) return { problems: problems.concat(["No tutorial group had at least 5 students."]) };
+
+  return { order: finalOrder, groups, count: kept, problems };
+}
+
+/* =====================================================================
+   2. The allocator — a direct port of src/allocator.py
+   The only departures are noted inline; they exist so the page accepts
+   any number of groups of any size, instead of exactly 120 x 50.
+   ===================================================================== */
+
+/* team_type_distribution() — total team count is derived from the group
+   size here rather than hard-coded to 10. */
+function teamTypeDistribution(maleCount, femaleCount, totalTeams){
+  const teams = {"3M2F":0, "2M3F":0, "4M1F":0, "1M4F":0, "5M0F":0, "0M5F":0};
+  let m = maleCount, f = femaleCount, left = totalTeams;
+  while (left > 0){
+    if (m >= f){
+      if (m >= 3 && f >= 2){ teams["3M2F"]++; m -= 3; f -= 2; }
+      else if (m >= 2 && f >= 3){ teams["2M3F"]++; m -= 2; f -= 3; }
+      else if (m >= 4 && f >= 1){ teams["4M1F"]++; m -= 4; f -= 1; }
+      else if (m >= 1 && f >= 4){ teams["1M4F"]++; m -= 1; f -= 4; }
+      else if (m >= 5 && f === 0){ teams["5M0F"]++; m -= 5; }
+      else if (m === 0 && f >= 5){ teams["0M5F"]++; f -= 5; }
+      else break;
+    } else {
+      if (m >= 2 && f >= 3){ teams["2M3F"]++; m -= 2; f -= 3; }
+      else if (m >= 3 && f >= 2){ teams["3M2F"]++; m -= 3; f -= 2; }
+      else if (m >= 1 && f >= 4){ teams["1M4F"]++; m -= 1; f -= 4; }
+      else if (m >= 4 && f >= 1){ teams["4M1F"]++; m -= 4; f -= 1; }
+      else if (m >= 5 && f === 0){ teams["5M0F"]++; m -= 5; }
+      else if (m === 0 && f >= 5){ teams["0M5F"]++; f -= 5; }
+      else break;
+    }
+    left--;
+  }
+  return teams;
+}
+
+function teamGenderDistribution(group, totalTeams){
+  let m = 0, f = 0;
+  for (const s of group){ if (s[4] === "Male") m++; else if (s[4] === "Female") f++; }
+  return teamTypeDistribution(m, f, totalTeams);
+}
+
+/* merge() / msort() — MergeSort by CGPA, ascending. O(n log n). */
+function merge(left, right){
+  const out = [];
+  let i = 0, j = 0;
+  while (i < left.length && j < right.length){
+    if (parseFloat(left[i][5]) <= parseFloat(right[j][5])) out.push(left[i++]);
+    else out.push(right[j++]);
+  }
+  while (i < left.length) out.push(left[i++]);
+  while (j < right.length) out.push(right[j++]);
+  return out;
+}
+function msort(list){
+  if (list.length < 2) return list.slice();
+  const mid = Math.floor(list.length / 2);
+  return merge(msort(list.slice(0, mid)), msort(list.slice(mid)));
+}
+function genderDiv(sorted){
+  return [sorted.filter(s => s[4] === "Female"), sorted.filter(s => s[4] !== "Female")];
+}
+
+/* team_formation() — lowest-CGPA women paired with highest-CGPA men.
+   Added: leftover students are dealt into the smallest teams instead of
+   being dropped, which the fixed 50-per-group version never had to do. */
+function teamFormation(group){
+  const sorted = msort(group);
+  let [female, male] = genderDiv(sorted);
+  const totalTeams = Math.floor(group.length / 5);
+  const types = teamGenderDistribution(group, totalTeams);
+  const teams = [];
+
+  for (const type of Object.keys(types)){
+    const mCount = parseInt(type[0], 10);
+    const fCount = parseInt(type[2], 10);
+    for (let n = 0; n < types[type]; n++){
+      const team = mCount ? female.slice(0, fCount).concat(male.slice(-mCount)) : female.slice(0, fCount);
+      teams.push(team);
+      female = female.slice(fCount);
+      if (mCount) male = male.slice(0, Math.max(0, male.length - mCount));
+    }
+  }
+
+  const leftovers = female.concat(male);
+  if (leftovers.length){
+    if (!teams.length) teams.push([]);
+    for (const s of leftovers){
+      let smallest = 0;
+      for (let t = 1; t < teams.length; t++) if (teams[t].length < teams[smallest].length) smallest = t;
+      teams[smallest].push(s);
+    }
+  }
+  return teams;
+}
+
+/* gpaChecker() — pair the most over-average team with the most
+   under-average one and trade a same-gender student between them. */
+function gpaChecker(teams, threshold){
+  const all = [];
+  for (const t of teams) for (const s of t) all.push(parseFloat(s[5]));
+  const meanGpa = all.reduce((a, b) => a + b, 0) / all.length;
+  const teamAvg = t => t.reduce((a, s) => a + parseFloat(s[5]), 0) / t.length;
+
+  const high = [], low = [];
+  teams.forEach((t, i) => {
+    const dev = teamAvg(t) - meanGpa;
+    if (dev > threshold) high.push([dev, i]);
+    else if (dev < -threshold) low.push([-dev, i]);
+  });
+  high.sort((a, b) => b[0] - a[0] || b[1] - a[1]);
+  low.sort((a, b) => b[0] - a[0] || b[1] - a[1]);
+
+  const n = Math.min(high.length, low.length);
+  for (let p = 0; p < n; p++){
+    const highTeam = teams[high[p][1]], lowTeam = teams[low[p][1]];
+    const rankHigh = highTeam.slice().sort((a, b) => parseFloat(b[5]) - parseFloat(a[5]));
+    const rankLow  = lowTeam.slice().sort((a, b) => parseFloat(a[5]) - parseFloat(b[5]));
+    let done = false;
+    for (const hs of rankHigh){
+      for (const ls of rankLow){
+        if (hs[4] === ls[4]){
+          highTeam.splice(highTeam.indexOf(hs), 1);
+          lowTeam.splice(lowTeam.indexOf(ls), 1);
+          highTeam.push(ls);
+          lowTeam.push(hs);
+          done = true;
+          break;
+        }
+      }
+      if (done) break;
+    }
+  }
+  return teams;
+}
+
+/* check_2plus_v2() — which school, if any, appears more than twice. */
+function check2plus(team){
+  const positions = new Map();
+  team.forEach((s, i) => {
+    if (!positions.has(s[2])) positions.set(s[2], []);
+    positions.get(s[2]).push(i);
+  });
+  let repeat = null, has = false;
+  for (const [school, idxs] of positions){
+    if (idxs.length > 2){ has = true; repeat = school; }
+  }
+  return [has, positions, repeat];
+}
+
+/* finder_swapper() — trade surplus same-school students for same-gender,
+   similar-CGPA peers elsewhere in the tutorial group. When no candidate
+   qualifies the violation is kept rather than breaking the CGPA balance. */
+function finderSwapper(teams, tolerance){
+  for (let gi = 0; gi < teams.length; gi++){
+    const group = teams[gi];
+    const [has, positions, repeat] = check2plus(group);
+    if (!has) continue;
+    const surplus = positions.get(repeat).slice(2);
+
+    for (const si of surplus){
+      const student = group[si];
+      if (!student) continue;
+      const gender = student[4];
+      const gpa = parseFloat(student[5]);
+
+      let swapped = false;
+      for (let oi = 0; oi < teams.length && !swapped; oi++){
+        if (oi === gi) continue;
+        const other = teams[oi];
+        for (let k = 0; k < other.length; k++){
+          const cand = other[k];
+          if (cand[4] === gender && Math.abs(gpa - parseFloat(cand[5])) < tolerance && cand[2] !== repeat){
+            const tmp = group[si];
+            group[si] = other[k];
+            other[k] = tmp;
+            swapped = true;    // first valid candidate wins — stop scanning
+            break;
+          }
+        }
+      }
+    }
+  }
+  return teams;
+}
+
+/* main() — the whole pipeline. */
+function allocate(cohort, threshold, tolerance){
+  const t0 = performance.now();
+  const result = new Map();
+  for (const key of cohort.order){
+    let teams = teamFormation(cohort.groups.get(key).map(s => s.slice()));
+    teams = gpaChecker(teams, threshold);
+    teams = finderSwapper(teams, tolerance);
+    teams.forEach((team, i) => { for (const s of team) s[6] = String(i + 1); });
+    result.set(key, teams);
+  }
+  return { allocation: result, order: cohort.order, ms: performance.now() - t0 };
+}
+
+/* =====================================================================
+   3. Measuring the result
+   ===================================================================== */
+const mean = xs => xs.reduce((a, b) => a + b, 0) / xs.length;
+const BALANCED = new Set(["3M2F", "2M3F"]);
+
+function analyse(run, threshold){
+  const groups = [];
+  const teamRows = [];
+
+  for (const key of run.order){
+    const teams = run.allocation.get(key);
+    const groupMean = mean(teams.flat().map(s => parseFloat(s[5])));
+    let inBand = 0, genderOk = 0, schoolOk = 0, maxDev = 0, size = 0;
+
+    teams.forEach((team, i) => {
+      const gpas = team.map(s => parseFloat(s[5]));
+      const avg = mean(gpas);
+      const dev = avg - groupMean;
+      const males = team.filter(s => s[4] === "Male").length;
+      const females = team.length - males;
+      const mix = males + "M" + females + "F";
+      const counts = new Map();
+      for (const s of team) counts.set(s[2], (counts.get(s[2]) || 0) + 1);
+      const maxSchool = Math.max(...counts.values());
+
+      const okGpa = Math.abs(dev) <= threshold + 1e-9;
+      const okGender = males > 0 && females > 0;
+      const okSchool = maxSchool <= 2;
+      if (okGpa) inBand++;
+      if (okGender) genderOk++;
+      if (okSchool) schoolOk++;
+      if (Math.abs(dev) > maxDev) maxDev = Math.abs(dev);
+      size += team.length;
+
+      teamRows.push({ group: key, no: i + 1, team, avg, dev, mix, males, females,
+                      maxSchool, okGpa, okGender, okSchool, balanced: BALANCED.has(mix) });
+    });
+
+    groups.push({ key, teams: teams.length, students: size, groupMean, maxDev, inBand, genderOk, schoolOk });
+  }
+
+  const total = teamRows.length;
+  const allThree = teamRows.filter(t => t.okGpa && t.okGender && t.okSchool).length;
+  return {
+    groups, teamRows, total, allThree,
+    students: groups.reduce((a, g) => a + g.students, 0),
+    gpaOk: teamRows.filter(t => t.okGpa).length,
+    genderOk: teamRows.filter(t => t.okGender).length,
+    schoolOk: teamRows.filter(t => t.okSchool).length,
+    balanced: teamRows.filter(t => t.balanced).length,
+    maxDev: teamRows.reduce((a, t) => Math.max(a, Math.abs(t.dev)), 0)
+  };
+}
+
+/* =====================================================================
+   4. Sample cohort — clearly synthetic, generated from a fixed seed so
+   the page opens on a working example instead of an empty shell.
+   ===================================================================== */
+const SCHOOLS = ["EEE","CoB (NBS)","SCSE","MAE","MSE","CEE","SPMS","ADM","WKWSCI","SSS","CoHASS","SBS","CCEB"];
+
+function makeSample(){
+  let seed = 20250903;
+  const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  const gauss = (mu, sd) => {
+    const u = Math.max(rnd(), 1e-9), v = Math.max(rnd(), 1e-9);
+    return mu + sd * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  };
+
+  const lines = ["Tutorial Group,Student ID,School,Name,Gender,CGPA"];
+  let id = 1;
+  for (let g = 1; g <= 40; g++){
+    // Every eighth group is deliberately lopsided, so the externalities the
+    // algorithm accepts on purpose are visible rather than hidden.
+    const skewed = g % 8 === 0;
+    const maleShare = skewed ? 0.88 : 0.42 + rnd() * 0.20;
+    const dominant = SCHOOLS[g % SCHOOLS.length];
+    const domShare = skewed ? 0.46 : 0.14 + rnd() * 0.12;
+    const groupMu = 3.85 + (rnd() - 0.5) * 0.55;
+
+    for (let s = 0; s < 50; s++){
+      const gender = rnd() < maleShare ? "Male" : "Female";
+      const school = rnd() < domShare ? dominant : SCHOOLS[Math.floor(rnd() * SCHOOLS.length)];
+      const cgpa = Math.min(5, Math.max(1.2, gauss(groupMu, 0.52)));
+      lines.push([
+        "G-" + g,
+        "U" + String(id).padStart(6, "0"),
+        school,
+        "Student " + String(id).padStart(4, "0"),
+        gender,
+        cgpa.toFixed(2)
+      ].join(","));
+      id++;
+    }
+  }
+  return lines.join("\n");
+}
+
+/* =====================================================================
+   5. Charts
+   ===================================================================== */
+const tip = document.getElementById("tip");
+function showTip(evt, html){
+  tip.innerHTML = html;
+  tip.style.left = evt.clientX + "px";
+  tip.style.top = (evt.clientY - 10) + "px";
+  tip.style.opacity = "1";
+}
+function hideTip(){ tip.style.opacity = "0"; }
+
+const SVGNS = "http://www.w3.org/2000/svg";
+function el(name, attrs, text){
+  const node = document.createElementNS(SVGNS, name);
+  for (const k in attrs) node.setAttribute(k, attrs[k]);
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+function hover(node, html){
+  node.addEventListener("mousemove", e => showTip(e, html));
+  node.addEventListener("mouseleave", hideTip);
+}
+
+/* Histogram of team CGPA deviation, with the accepted band drawn behind. */
+function drawGpaChart(stats, threshold){
+  const svg = document.getElementById("chartGpa");
+  svg.textContent = "";
+  const W = 760, H = 230, L = 40, R = 14, T = 14, B = 38;
+  svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+
+  const span = Math.max(threshold * 1.9, Math.ceil(stats.maxDev * 20) / 20, 0.25);
+  const BINS = 32, binW = (span * 2) / BINS;
+  const counts = new Array(BINS).fill(0);
+  for (const t of stats.teamRows){
+    let idx = Math.floor((t.dev + span) / binW);
+    counts[Math.min(BINS - 1, Math.max(0, idx))]++;
+  }
+  const peak = Math.max(1, ...counts);
+  const x = v => L + ((v + span) / (span * 2)) * (W - L - R);
+  const y = c => H - B - (c / peak) * (H - T - B);
+
+  svg.appendChild(el("rect", {x: x(-threshold), y: T, width: x(threshold) - x(-threshold),
+                             height: H - T - B, class: "band"}));
+
+  for (let g = 0; g <= 4; g++){
+    const c = Math.round((peak / 4) * g);
+    svg.appendChild(el("line", {x1: L, x2: W - R, y1: y(c), y2: y(c), class: "gl"}));
+    svg.appendChild(el("text", {x: L - 6, y: y(c) + 3.5, "text-anchor": "end", "font-size": "9"}, String(c)));
+  }
+
+  const step = (W - L - R) / BINS;
+  counts.forEach((c, i) => {
+    const bx = L + i * step;
+    const inBand = (i + 0.5) * binW - span > -threshold - 1e-9 && (i + 0.5) * binW - span < threshold + 1e-9;
+    if (c > 0){
+      svg.appendChild(el("rect", {x: bx + 1, y: y(c), width: Math.max(1, step - 2),
+        height: H - B - y(c), rx: 2, class: inBand ? "m-ok" : "m-bad"}));
+    }
+    const hit = el("rect", {x: bx, y: T, width: step, height: H - T - B, class: "hit"});
+    const lo = (i * binW - span), hi = lo + binW;
+    hover(hit, "<b>" + c + "</b> team" + (c === 1 ? "" : "s") + "<br>dev " +
+      (lo >= 0 ? "+" : "") + lo.toFixed(2) + " to " + (hi >= 0 ? "+" : "") + hi.toFixed(2));
+    svg.appendChild(hit);
+  });
+
+  svg.appendChild(el("line", {x1: L, x2: W - R, y1: H - B, y2: H - B, class: "axis"}));
+  [[-threshold, "−" + threshold.toFixed(2)], [0, "0"], [threshold, "+" + threshold.toFixed(2)]]
+    .forEach(([v, label]) => {
+      svg.appendChild(el("line", {x1: x(v), x2: x(v), y1: T, y2: H - B, class: "thr"}));
+      svg.appendChild(el("text", {x: x(v), y: H - B + 14, "text-anchor": "middle", "font-size": "9.5", class: "lbl"}, label));
+    });
+  svg.appendChild(el("text", {x: L, y: H - B + 14, "text-anchor": "start", "font-size": "9"}, "−" + span.toFixed(2)));
+  svg.appendChild(el("text", {x: W - R, y: H - B + 14, "text-anchor": "end", "font-size": "9"}, "+" + span.toFixed(2)));
+  svg.appendChild(el("text", {x: L, y: H - 6, "text-anchor": "start", "font-size": "9"}, "team average − tutorial group mean"));
+
+  document.getElementById("noteGpa").innerHTML =
+    "Blue bars sit inside the &plusmn;" + threshold.toFixed(2) + " band, red bars outside it. Widest deviation in this cohort: <b>" +
+    stats.maxDev.toFixed(3) + "</b>.";
+}
+
+/* Shared horizontal bar chart for the two categorical breakdowns. */
+function drawBars(svgId, noteId, rows, note, opts){
+  const svg = document.getElementById(svgId);
+  svg.textContent = "";
+  const o = opts || {};
+  const W = 380, rowH = 26, T = 8, B = 22, L = o.gutter || 62, R = 46;
+  const H = T + rows.length * rowH + B;
+  svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+
+  const peak = Math.max(1, ...rows.map(r => r.value));
+  const scale = v => (v / peak) * (W - L - R);
+
+  rows.forEach((r, i) => {
+    const cy = T + i * rowH + rowH / 2;
+    svg.appendChild(el("text", {x: L - 9, y: cy + 3.5, "text-anchor": "end", "font-size": "10.5", class: "lbl"}, r.label));
+    const w = scale(r.value);
+    if (r.value > 0){
+      svg.appendChild(el("rect", {x: L, y: cy - 7, width: Math.max(2, w), height: 14, rx: 3,
+        class: r.tone === "bad" ? "m-bad" : r.tone === "soft" ? "m-soft" : "m-ok"}));
+    }
+    svg.appendChild(el("text", {x: L + Math.max(2, w) + 7, y: cy + 3.5, "font-size": "10.5", class: "lbl"}, String(r.value)));
+    const hit = el("rect", {x: 0, y: cy - rowH / 2, width: W, height: rowH, class: "hit"});
+    hover(hit, "<b>" + r.label + "</b><br>" + r.value + " team" + (r.value === 1 ? "" : "s") + " &middot; " + r.detail);
+    svg.appendChild(hit);
+  });
+
+  svg.appendChild(el("line", {x1: L, x2: L, y1: T, y2: H - B, class: "axis"}));
+  svg.appendChild(el("text", {x: L, y: H - 7, "text-anchor": "start", "font-size": "9"}, o.caption || "teams"));
+  document.getElementById(noteId).innerHTML = note;
+}
+
+/* =====================================================================
+   6. Rendering the page
+   ===================================================================== */
+const fmt = n => n.toLocaleString("en-US");
+const pct = (a, b) => b ? (a / b) * 100 : 0;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+let state = { run: null, stats: null, source: "", isSample: false };
+
+function renderTiles(stats, ms){
+  document.getElementById("tiles").innerHTML = [
+    ["Students", fmt(stats.students), ""],
+    ["Tutorial groups", fmt(stats.groups.length), ""],
+    ["Teams formed", fmt(stats.total), ""],
+    ["Clean teams", pct(stats.allThree, stats.total).toFixed(1), "%"],
+    ["Runtime", ms < 10 ? ms.toFixed(2) : ms.toFixed(0), "ms"]
+  ].map(([k, v, u]) =>
+    '<div class="tile"><div class="k">' + k + '</div><div class="v">' + v +
+    (u ? '<span class="u">' + u + "</span>" : "") + "</div></div>"
+  ).join("");
+}
+
+function renderScore(stats, threshold){
+  const rows = [
+    ["Gender", "both genders in the team", stats.genderOk],
+    ["CGPA", "within ±" + threshold.toFixed(2) + " of group mean", stats.gpaOk],
+    ["School", "at most 2 from any one school", stats.schoolOk]
+  ];
+  document.getElementById("score").innerHTML = rows.map(([name, sub, ok]) => {
+    const p = pct(ok, stats.total);
+    const fail = stats.total - ok;
+    const pill = fail === 0
+      ? '<span class="pill ok">&#10003; clean</span>'
+      : '<span class="pill bad">&#10007; ' + fmt(fail) + " over</span>";
+    return '<div class="score-row">' +
+      '<div class="score-name">' + name + " " + pill + '<span class="sub">' + sub + "</span></div>" +
+      '<div class="score-count">' + fmt(ok) + " / " + fmt(stats.total) + "</div>" +
+      '<div class="meter"><span style="width:' + p.toFixed(1) + '%"></span></div>' +
+      '<div class="score-pct">' + p.toFixed(1) + "%</div></div>";
+  }).join("");
+  document.getElementById("scoreAll").textContent =
+    fmt(stats.allThree) + " / " + fmt(stats.total) + " TEAMS CLEAN";
+}
+
+function renderCharts(stats, threshold){
+  drawGpaChart(stats, threshold);
+
+  const order = ["3M2F", "2M3F", "4M1F", "1M4F", "5M0F", "0M5F"];
+  const seen = new Map();
+  for (const t of stats.teamRows) seen.set(t.mix, (seen.get(t.mix) || 0) + 1);
+  const mixes = order.filter(m => seen.has(m)).concat([...seen.keys()].filter(m => !order.includes(m)).sort());
+  drawBars("chartGender", "noteGender", mixes.map(m => {
+    const single = m.startsWith("0M") || m.endsWith("0F");
+    return {
+      label: m, value: seen.get(m),
+      tone: single ? "bad" : BALANCED.has(m) ? "ok" : "soft",
+      detail: single ? "single gender — constraint missed" : BALANCED.has(m) ? "preferred split" : "mixed but skewed"
+    };
+  }), "Solid blue is the preferred 3M2F / 2M3F split (<b>" + fmt(stats.balanced) + "</b> teams); pale blue is mixed but skewed; red is single-gender, which only happens when the tutorial group itself is lopsided.",
+     {caption: "teams"});
+
+  const buckets = new Map();
+  for (const t of stats.teamRows) buckets.set(t.maxSchool, (buckets.get(t.maxSchool) || 0) + 1);
+  const keys = [...buckets.keys()].sort((a, b) => a - b);
+  drawBars("chartSchool", "noteSchool", keys.map(k => ({
+    label: "block of " + k,
+    value: buckets.get(k),
+    tone: k > 2 ? "bad" : "ok",
+    detail: k > 2 ? "over the cap of 2" : "within the cap"
+  })), "Each team counted by its largest same-school block. Anything past two is a violation the allocator kept on purpose, because no swap existed inside the &plusmn;" +
+       parseFloat(document.getElementById("swapTol").value).toFixed(2) + " CGPA tolerance.",
+     {gutter: 68, caption: "teams, by largest same-school block"});
+}
+
+function renderGroupTable(stats, threshold){
+  const head = "<thead><tr><th>Group</th><th>Students</th><th>Teams</th><th>Mean CGPA</th>" +
+               "<th>Max dev</th><th>CGPA ok</th><th>Gender ok</th><th>School ok</th></tr></thead>";
+  const body = stats.groups.map(g =>
+    "<tr><td>" + esc(g.key) + "</td><td>" + g.students + "</td><td>" + g.teams + "</td>" +
+    "<td>" + g.groupMean.toFixed(3) + "</td>" +
+    '<td class="' + (g.maxDev > threshold + 1e-9 ? "bad" : "") + '">' + g.maxDev.toFixed(3) + "</td>" +
+    '<td class="' + (g.inBand < g.teams ? "bad" : "") + '">' + g.inBand + "/" + g.teams + "</td>" +
+    '<td class="' + (g.genderOk < g.teams ? "bad" : "") + '">' + g.genderOk + "/" + g.teams + "</td>" +
+    '<td class="' + (g.schoolOk < g.teams ? "bad" : "") + '">' + g.schoolOk + "/" + g.teams + "</td></tr>"
+  ).join("");
+  document.getElementById("groupTable").innerHTML = head + "<tbody>" + body + "</tbody>";
+  document.getElementById("groupCount").textContent = fmt(stats.groups.length) + " GROUPS";
+}
+
+function renderTeams(groupKey){
+  const stats = state.stats;
+  const rows = stats.teamRows.filter(t => t.group === groupKey);
+  const groupMean = stats.groups.find(g => g.key === groupKey).groupMean;
+
+  document.getElementById("teams").innerHTML = rows.map(t => {
+    const counts = new Map();
+    for (const s of t.team) counts.set(s[2], (counts.get(s[2]) || 0) + 1);
+    const bad = !(t.okGpa && t.okGender && t.okSchool);
+    const roster = t.team.map(s =>
+      '<li><span class="nm">' + esc(s[3]) + "</span>" +
+      '<span class="sc' + (counts.get(s[2]) > 2 ? " dup" : "") + '">' + esc(s[2]) + "</span>" +
+      '<span class="gp">' + parseFloat(s[5]).toFixed(2) + "</span></li>"
+    ).join("");
+    return '<article class="team' + (bad ? " viol" : "") + '">' +
+      '<div class="team-h"><span class="no">Team ' + t.no + '</span><span class="mix">' + t.mix + "</span></div>" +
+      '<div class="team-stats">' +
+        "<span>avg <b>" + t.avg.toFixed(2) + "</b></span>" +
+        '<span class="' + (t.okGpa ? "" : "bad") + '">dev <b>' + (t.dev >= 0 ? "+" : "") + t.dev.toFixed(3) + "</b></span>" +
+        '<span class="' + (t.okSchool ? "" : "bad") + '">max school <b>' + t.maxSchool + "</b></span>" +
+      "</div><ul class=\"roster\">" + roster + "</ul></article>";
+  }).join("");
+
+  document.getElementById("browseNote").textContent =
+    "MEAN " + groupMean.toFixed(3) + " · " + rows.length + " TEAMS";
+}
+
+function renderBrowser(stats){
+  const sel = document.getElementById("groupSel");
+  sel.innerHTML = stats.groups.map(g => '<option value="' + esc(g.key) + '">' + esc(g.key) + "</option>").join("");
+  renderTeams(stats.groups[0].key);
+}
+
+/* =====================================================================
+   7. Wiring
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+const gpaThr = $("gpaThr"), swapTol = $("swapTol");
+let rawText = "";
+
+function readThreshold(){ return parseFloat(gpaThr.value); }
+function readTolerance(){ return parseFloat(swapTol.value); }
+
+function syncThresholdLabels(){
+  const t = readThreshold(), s = readTolerance();
+  $("gpaThrOut").textContent = "±" + t.toFixed(2);
+  $("swapTolOut").textContent = "±" + s.toFixed(2);
+  $("specGpa").textContent = t.toFixed(2);
+  $("specTol").textContent = s.toFixed(2);
+}
+gpaThr.addEventListener("input", syncThresholdLabels);
+swapTol.addEventListener("input", syncThresholdLabels);
+
+function showErrors(problems){
+  const box = $("errors");
+  if (!problems || !problems.length){ box.innerHTML = ""; return; }
+  box.innerHTML = '<div class="errbox"><h3>' + problems.length + " row" + (problems.length === 1 ? "" : "s") +
+    " skipped</h3><ul>" + problems.map(p => "<li>" + esc(p) + "</li>").join("") +
+    "</ul></div>";
+}
+
+function run(){
+  if (!rawText){ $("statusText").textContent = "Add a CSV in step 1 first."; return; }
+  const cohort = readCohort(rawText);
+  if (!cohort.order){
+    showErrors(cohort.problems);
+    $("statusText").textContent = "Could not read that file.";
+    $("output").hidden = true;
+    $("resting").hidden = false;
+    return;
+  }
+  showErrors(cohort.problems);
+
+  const threshold = readThreshold(), tolerance = readTolerance();
+  const r = allocate(cohort, threshold, tolerance);
+  const stats = analyse(r, threshold);
+  state.run = r; state.stats = stats;
+
+  renderTiles(stats, r.ms);
+  renderScore(stats, threshold);
+  renderCharts(stats, threshold);
+  renderGroupTable(stats, threshold);
+  renderBrowser(stats);
+
+  $("resting").hidden = true;
+  $("output").hidden = false;
+  $("dlBtn").disabled = false;
+  $("statusDot").className = "dot" + (state.isSample ? " sample" : "");
+  $("statusText").textContent = (state.isSample ? "Sample cohort" : state.source) +
+    " · " + fmt(stats.students) + " students → " + fmt(stats.total) +
+    " teams in " + (r.ms < 10 ? r.ms.toFixed(2) : r.ms.toFixed(0)) + " ms";
+}
+
+/* Staging a file never runs the allocator — that waits for Run allocation. */
+function loadText(text, label, isSample){
+  rawText = text;
+  state.source = label;
+  state.isSample = !!isSample;
+  const lines = Math.max(0, text.trim().split("\n").length - 1);
+
+  // Confirm right where the file was dropped or picked — this is the main signal.
+  $("drop").classList.add("loaded");
+  $("dropIdle").hidden = true;
+  $("dropLoaded").hidden = false;
+  $("dropName").textContent = label;
+  $("dropRows").textContent = fmt(lines) + " data row" + (lines === 1 ? "" : "s") + " loaded · click to replace";
+
+  $("filemeta").innerHTML = '<span class="tag">source</span> ' + esc(label) +
+    '<br><span class="tag">rows</span> ' + fmt(lines);
+  showErrors(null);
+  // Drop any previous results so what's on screen always matches what was run.
+  state.run = null; state.stats = null;
+  $("output").hidden = true;
+  $("resting").hidden = false;
+  $("dlBtn").disabled = true;
+  $("runBtn").disabled = false;
+  $("statusDot").className = "dot idle";
+  $("statusText").textContent = label + " ready · press Run allocation";
+}
+
+/* One path for both picking and dropping a file. */
+function handleFile(f){
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const text = String(reader.result);
+    if (!text.trim()){
+      $("statusDot").className = "dot bad";
+      $("statusText").textContent = f.name + " is empty.";
+      return;
+    }
+    loadText(text, f.name, false);
+  };
+  reader.onerror = () => {
+    $("statusDot").className = "dot bad";
+    $("statusText").textContent = "Could not read " + f.name + ".";
+  };
+  reader.readAsText(f);
+}
+
+$("file").addEventListener("change", e => {
+  const f = e.target.files[0];
+  e.target.value = "";          // so picking the same file again still fires
+  handleFile(f);
+});
+
+const drop = $("drop");
+["dragenter", "dragover"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add("hot"); }));
+["dragleave", "drop"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove("hot"); }));
+drop.addEventListener("drop", e => handleFile(e.dataTransfer.files[0]));
+
+$("sampleBtn").addEventListener("click", () => loadText(makeSample(), "sample_cohort.csv (generated)", true));
+$("runBtn").addEventListener("click", run);
+$("groupSel").addEventListener("change", e => renderTeams(e.target.value));
+
+function toCSV(){
+  const out = ["Tutorial Group,Student ID,School,Name,Gender,CGPA,Team Assigned"];
+  const quote = v => /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  for (const key of state.run.order){
+    for (const team of state.run.allocation.get(key)){
+      for (const s of team) out.push(s.map(quote).join(","));
+    }
+  }
+  return out.join("\n") + "\n";
+}
+
+$("dlBtn").addEventListener("click", async () => {
+  if (!state.run) return;
+  const text = toCSV();
+  const filename = "team_allocations.csv";
+  try {
+    const downloads = window.claude && window.claude.use ? await window.claude.use("downloads") : null;
+    if (downloads){ await downloads.save({ filename: filename, data: text }); return; }
+  } catch (err){ /* fall through to the plain browser download */ }
+  const url = URL.createObjectURL(new Blob([text], { type: "text/csv" }));
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+});
+
+/* The portal opens empty: nothing is computed until a file is staged and Run is pressed. */
+syncThresholdLabels();
+$("runBtn").disabled = true;
+</script>
+<!--#ARTIFACT_END-->
+</body>
+</html>

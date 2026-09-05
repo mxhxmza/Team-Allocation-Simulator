@@ -305,9 +305,10 @@ def finder_swapper(tutorial_group_list: list, gpa_tolerance: float = 0.5) -> lis
                             other_group[other_idx],
                             group[student_index],
                         )
+                        break          # first valid candidate wins — stop scanning this team
                 else:
-                    continue
-                break
+                    continue           # no candidate here, try the next team
+                break                  # swap done, stop scanning teams
 
     return tutorial_group_list
 
